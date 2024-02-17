@@ -8,6 +8,8 @@ D_HOST = "127.0.0.1"  # The server's hostname or IP address
 D_PORT = 11241  # The port used by the server
 
 HOST = input("server ip: ")
+if HOST.strip() == "":
+    HOST = D_HOST
 PORT = input("server port(just press enter): ")
 if PORT.strip() == "":
     PORT = D_PORT
@@ -32,15 +34,20 @@ class Client():
     def load_bytes_from_file(self, file_path: str) -> bytes:
         byt = b''
         file = open(file_path, "rb")
-        byt = file.read()
+        try:
+            byt = file.read()
+        except Exception as e:
+            print(e)
+            return b"\00\00"
+        finally:
+            file.close()
         return byt
 
 
-    def send_file(self, input_file_path: str):
-        data = self.load_bytes_from_file(input_file_path)
-        output_file_path = input_file_path.split('\\')
-        output_file_path = self.current_dir + output_file_path[ len(output_file_path) - 1 ]
-        print("ofp: " , output_file_path)
+    def upload_file(self, path_on_server: str, path_on_pc: str):
+        data = self.load_bytes_from_file(path_on_pc)
+
+        output_file_path = self.current_dir + path_on_server
 
         comand = "upload~" + output_file_path + ((512 - len("upload~" + output_file_path)) * ' ')
         self.client_sock.send(bytes( comand , "utf-8"))
@@ -53,7 +60,7 @@ class Client():
         self.client_sock.send(b"\x00\x00")
 
 
-    def download_file(self, path_on_server, path_on_pc):
+    def download_file(self, path_on_server: str, path_on_pc: str):
         comand = "download~" + self.current_dir + path_on_server + ((512 - len("upload~" + self.current_dir + path_on_server)) * ' ')
         self.client_sock.send(bytes(comand, "utf-8"))
 
@@ -83,7 +90,7 @@ class Client():
 
                 match input_data[0]:
                     case "upload":
-                        self.send_file(input_data[1])
+                        self.upload_file(input_data[1], input_data[2])
                     case "download":
                         self.download_file(input_data[1], input_data[2])
                     case "stop":
